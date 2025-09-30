@@ -11,201 +11,76 @@ class MeuApp extends StatefulWidget {
   State<MeuApp> createState() => _MeuAppState();
 }
 
-class _MeuAppState extends State<MeuApp> {
-  // Variáveis de estado para armazenar os valores
-  String texto_na_tela = 'Construindo seu app com Flutter';
-  String localSensor = '';
-  String tipoSensor = '';
-  String macAddress = ''; 
-  String latitude = '';
-  String longitude = '';
-  String responsavel = '';
-  String observacao = ''; 
+class MeuAppState extends State<MeuApp> {
+  Future<void> _obterLocalizacao() async {
 
-  // Controladores para os campos de texto
-  final _localController = TextEditingController();
-  final _tipoController = TextEditingController();
-  final _macAddressController = TextEditingController(); 
-  final _latitudeController = TextEditingController(); 
-  final _longitudeController = TextEditingController(); 
-  final _responsavelController = TextEditingController(); 
-  final _observacaoController = TextEditingController(); 
 
-  @override
-  void dispose() {
-    // Limpa os controladores quando o widget é removido
-    _localController.dispose();
-    _tipoController.dispose();
-    _macAddressController.dispose(); 
-    _latitudeController.dispose();
-    _longitudeController.dispose();
-    _responsavelController.dispose();
-    _observacaoController.dispose();
 
-    super.dispose();
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('SCRN', style: TextStyle(color: Colors.white)),
-          backgroundColor: const Color.fromARGB(255, 64, 60, 134),
+
+
+
+
+
+    // Se a permissão ainda não foi concedida (denied)
+    // O app solicita a permissão ao usuário (requestPermission()).
+    // Caso o usuário negue de novo:
+    // Mostra mensagem informando que a permissão foi negada.
+    // E finaliza a função (return) e marca _isLoadingLocation como false.
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Permissão de localização negada')),
+          );
+        }
+        setState(() {
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+    }
+
+    // Caso a permissão esteja negada de forma permanente (usuário marcou "não perguntar novamente"
+    // ou bloqueou nas configurações do sistema)
+    // O app não pode mais pedir diretamente.
+    // Mostra mensagem explicando o problema
+    // E encerra a execução, já que só o usuário poderá liberar manualmente nas configurações do celular
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Permissão de localização negada permanentemente')),
+        );
+      }
+      setState(() {
+        _isLoadingLocation = false;
+      });
+      return;
+    }
+
+
+    // Finalmente tenta obter a localização atual
+    // O parâmetro LocationSettings: LocationAccuracy.high
+    // pede a maior precisão possível (pode consumir mais bateria e tempo)
+    // Retorna um objeto Position com informações como latitude, longitude, altitude, velocidade, timestamp, etc
+    try {
+      Position pos = await Geolocator.getCurrentPosition(
+        locationSettings: LocationSettings(
+          accuracy: LocationAccuracy.high, // mesmo efeito do desiredAccuracy das versões anteriores
+          distanceFilter: 0,               // opcional: atualiza sempre, mesmo sem deslocamento
         ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Texto que será atualizado
-                Text(
-                  texto_na_tela,
-                  style: const TextStyle(fontSize: 24),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 30),
+      );
 
-                // Campo de texto para "Local do Sensor"
-                TextField(
-                  controller: _localController,
-                  decoration: const InputDecoration(
-                    labelText: 'Local do Sensor',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLength: 20,
-                  onChanged: (value) {
-                    setState(() {
-                      localSensor = value; // Atualiza a variável ao digitar
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
+    // Atualiza o estado do widget com os valores da localização
+    // latitude e longitude são convertidos para String com 6 casas decimais
+    // Preenche os controladores de texto _latitudeController e _longitudeController (vinculados aos TextFields).
+    // Marca _isLoadingLocation como false indicando que terminou de carregar.
+    }
 
-                // Campo de texto para "Tipo"
-                TextField(
-                  controller: _tipoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLength: 20,
-                  onChanged: (value) {
-                    setState(() {
-                      tipoSensor = value; // Atualiza a variável ao digitar
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
 
-                // Campo de texto para "Mac Address"
-                TextField(
-                  controller: _macAddressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Mac Address',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLength: 17, // Formato: XX:XX:XX:XX:XX:XX
-                  onChanged: (value) {
-                    setState(() {
-                      macAddress = value; // Atualiza a variável ao digitar
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
 
-                // Campo de texto para "Latitude"
-                TextField(
-                  controller: _latitudeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Latitude',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLength: 17, // Formato: XX:XX:XX:XX:XX:XX
-                  onChanged: (value) {
-                    setState(() {
-                      latitude = value; 
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
 
-                // Campo de texto para "Longitude"
-                TextField(
-                  controller: _longitudeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Longitude',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLength: 17, // Formato: XX:XX:XX:XX:XX:XX
-                  onChanged: (value) {
-                    setState(() {
-                      latitude = value; 
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Campo de texto para "Responsavel"
-                TextField(
-                  controller: _responsavelController,
-                  decoration: const InputDecoration(
-                    labelText: 'Resposavel',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLength: 17, // Formato: XX:XX:XX:XX:XX:XX
-                  onChanged: (value) {
-                    setState(() {
-                      latitude = value; 
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Campo de texto para "Observação"
-                TextField(
-                  controller: _observacaoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Observação',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLength: 17, // Formato: XX:XX:XX:XX:XX:XX
-                  onChanged: (value) {
-                    setState(() {
-                      latitude = value; 
-                    });
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                // Botão para confirmar
-                ElevatedButton(
-                  onPressed: () {
-                    // Atualiza o texto na tela com os valores dos campos
-                    setState(() {
-                      if (_localController.text.isNotEmpty &&
-                          _tipoController.text.isNotEmpty &&
-                          _macAddressController.text.isNotEmpty) {
-                        texto_na_tela =
-                            "Local: ${_localController.text}\nTipo: ${_tipoController.text}\nMac Address: ${_macAddressController.text}\n Latitude: ${_latitudeController.text}\n Longitude: ${_longitudeController.text}\n Responsável: ${_responsavelController.text}\n Observação: ${_observacaoController.text}";
-                      } else {
-                        texto_na_tela =
-                            "Por favor, preencha todos os campos.";
-                      }
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(200, 50),
-                  ),
-                  child: const Text('Confirmar'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
